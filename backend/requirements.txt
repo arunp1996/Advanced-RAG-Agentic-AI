@@ -1,0 +1,26 @@
+fastapi==0.115.12
+uvicorn[standard]==0.34.0
+SQLAlchemy==2.0.38
+psycopg[binary]==3.2.5
+pydantic-settings==2.7.1
+python-multipart==0.0.20
+PyJWT==2.10.1
+pwdlib[argon2]==0.2.1
+chromadb==0.6.3
+sentence-transformers==3.4.1
+pypdf==5.3.0
+python-docx==1.1.2
+httpx==0.28.1
+pytest==8.3.4
+
+mcp>=1.28,<2
+langgraph>=0.2,<2.0
+langfuse>=4.7.0,<5.0.0
+rank-bm25==0.2.2
+
+# Versioned database schema migrations
+alembic>=1.14,<2.0
+
+# Gmail API report delivery (OAuth token mounted read-only at runtime)
+google-api-python-client>=2.160,<3.0
+google-auth>=2.38,<3.0

@@ -1,0 +1,156 @@
+.env
+.venv/
+__pycache__/
+*.py[cod]
+node_modules/
+dist/
+data/
+.pytest_cache/
+
+# Environment and secrets
+.env*
+!.env.example
+*token*.json
+*credentials*
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Backups and database files
+backups/
+**/backups/
+*.sql
+*.dump
+*.sqlite
+*.sqlite3
+*.db
+
+# Runtime files and logs
+*.log
+logs/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Python environments and cache
+venv/
+.venv/
+__pycache__/
+
+# Frontend generated files
+node_modules/
+dist/
+coverage/
+
+# Generated temporary files
+*.tmp
+*.swp
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Backups and production data
+backups/
+*.dump
+*.sql
+*.sqlite3
+*.db
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Frontend
+node_modules/
+dist/
+build/
+
+# Logs
+*.log
+
+# All nested environment and secret files
+**/.env
+**/.env.*
+**/.env-*
+**/*credentials*
+**/*token*.json
+
+# Preserve only the root example configuration
+!.env.example
+
+# All backup and historical files
+**/backups/
+*.before-*
+*.bak
+*.bak-*
+*.backup
+*.backup-*
+
+# Private certificates and keys
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Temporary files
+*.tmp
+*.swp
+*.old
+
+# Unidentified temporary root artifacts
+/06d6d580da28
+/12.2.2
+/1c6b9ca82072
+/65645c7bb6a0
+/73e1f16e078c
+/7780f5356e6d
+/9ca9fc626db9
+/9dd2f6a1cc91
+/a1a94836063c
+/advanced-rag-agentic-ai-ui@0.1.0
+/b57a791d8b24
+/exec
+/fe4f6d74e203
+/Removed
+/Running
+/vite
+/.gitignore.before-github-backup
+
+# Historical and recovery files
+*.before
+*.before_*
+*.backup
+*.bak
+*.old
+*.recovery-copy
+*.current-backup
+*.nav-backup
+*.broken-*
+*.unused-*
+
+# Sensitive environment files
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+*.env
+**/*.env
+production.env
+test-api-complete.env
+
+# Production and recovery backups
+implementation/monitoring-v1/backups/
+**/backups/
+
+# Container inspection output may contain environment variables
+implementation/monitoring-v1/backups/**/test-api-container-inspect.json
+
+# Pre-change configuration backups
+*.pre-*

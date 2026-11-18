@@ -1,0 +1,12 @@
+FROM ragdashboardv2-api:report-email-test
+
+USER root
+
+COPY requirements-monitoring-test.txt /tmp/requirements-monitoring-test.txt
+
+RUN pip install --no-cache-dir -r /tmp/requirements-monitoring-test.txt \
+    && rm -f /tmp/requirements-monitoring-test.txt
+
+COPY app/agentic_monitoring.py /app/app/agentic_monitoring.py
+
+USER 10001:10001

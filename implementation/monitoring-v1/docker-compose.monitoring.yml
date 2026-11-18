@@ -1,0 +1,97 @@
+services:
+  redis:
+    image: redis:7.4-alpine
+    container_name: rag-monitoring-v1-redis
+    environment:
+      MONITORING_REDIS_PASSWORD: ${MONITORING_REDIS_PASSWORD:?Redis password required}
+      GMAIL_TOKEN_PATH: /run/secrets/gmail-token.json
+      AGENT_REPORT_EMAIL_TO: sdsorgonicforms@gmail.com
+      AGENT_REPORT_EMAIL_ENABLED: "false"
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --requirepass
+      - ${MONITORING_REDIS_PASSWORD:?Redis password required}
+    volumes:
+      - monitoring_redis_data:/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - redis-cli -a "$$MONITORING_REDIS_PASSWORD" ping | grep -q PONG
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: ./celery
+    container_name: rag-monitoring-v1-worker
+    volumes:
+      - /home/arun/advanced-rag-monitoring/safe-report:/run/advanced-rag-monitoring:ro
+      - /home/arun/advanced-rag-monitoring/reports:/var/lib/advanced-rag-reports:rw
+      - /home/arun/.config/advanced-rag/gmail-token.json:/run/secrets/gmail-token.json:ro
+    env_file:
+      - .env.monitoring-test-db
+      - .env.monitoring-test-langfuse
+    environment:
+      MONITORING_REDIS_HOST: redis
+      MONITORING_REDIS_PORT: "6379"
+      MONITORING_REDIS_PASSWORD: ${MONITORING_REDIS_PASSWORD:?Redis password required}
+      GMAIL_TOKEN_PATH: /run/secrets/gmail-token.json
+      AGENT_REPORT_EMAIL_TO: sdsorgonicforms@gmail.com
+      AGENT_REPORT_EMAIL_ENABLED: "false"
+    command:
+      - celery
+      - -A
+      - celery_app.app
+      - worker
+      - --loglevel=INFO
+      - --concurrency=4
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - default
+      - rag-test
+
+  beat:
+    build:
+      context: ./celery
+    container_name: rag-monitoring-v1-beat
+    env_file:
+      - .env.monitoring-test-db
+      - .env.monitoring-test-langfuse
+    environment:
+      MONITORING_REDIS_HOST: redis
+      MONITORING_REDIS_PORT: "6379"
+      MONITORING_REDIS_PASSWORD: ${MONITORING_REDIS_PASSWORD:?Redis password required}
+      ENABLE_DAILY_REPORT_SCHEDULE: "false"
+    command:
+      - celery
+      - -A
+      - celery_app.app
+      - beat
+      - --loglevel=INFO
+      - --schedule=/var/lib/celery/celerybeat-schedule
+    volumes:
+      - monitoring_beat_data:/var/lib/celery
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - default
+      - rag-test
+
+volumes:
+  monitoring_redis_data:
+  monitoring_beat_data:
+
+networks:
+  default: {}
+  rag-test:
+    external: true
+    name: rag-rollback-test-net

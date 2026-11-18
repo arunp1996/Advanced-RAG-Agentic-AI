@@ -1,0 +1,13 @@
+Advanced RAG Agentic AI — ChatGPT-style chat management patch
+
+Includes updated frontend App.jsx and CSS, plus backend conversation metadata/API changes.
+Features: per-account persistent conversation history, search by title/folder/message text, pin/unpin, rename, move/create folder by naming it, archive/restore, delete with confirmation, audit events, and ownership checks.
+
+Important: back up your current source files first. Copy the four files in this archive to the matching paths under:
+/home/sirag/Advanced_RAG_Agentic_AI_Phase12/Advanced_RAG_Agentic_AI
+
+Then rebuild:
+  docker compose -f deploy/compose/docker-compose.yml config --quiet
+  docker compose -f deploy/compose/docker-compose.yml up -d --build api frontend
+
+The API performs backward-compatible PostgreSQL ALTER TABLE ADD COLUMN IF NOT EXISTS at startup. No tables or existing conversations are dropped. The current implementation treats folders as conversation folder names; entering a new name in “Move to / create folder” creates that folder grouping when the chat is moved there. User and admin accounts each see only their own conversations.

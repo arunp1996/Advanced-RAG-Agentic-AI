@@ -1,0 +1,144 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ragdb
+      POSTGRES_USER: raguser
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me_local_only}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U raguser -d ragdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ../../backend
+    env_file:
+      - ../../.env
+    environment:
+      DATABASE_URL: postgresql+psycopg://raguser:${POSTGRES_PASSWORD:-change_me_local_only}@postgres:5432/ragdb
+      REPORTING_DATABASE_URL: ${REPORTING_DATABASE_URL:?Reporting reader database URL required}
+      CHROMA_PATH: /data/chroma
+      CORS_ORIGINS: http://10.0.7.70:8081,http://localhost:5173
+      AGENT_REPORT_EMAIL_ENABLED: ${AGENT_REPORT_EMAIL_ENABLED:-false}
+      AGENT_REPORT_EMAIL_TO: ${AGENT_REPORT_EMAIL_TO:-sdsorgonicforms@gmail.com}
+      GMAIL_TOKEN_PATH: /run/secrets/gmail-token.json
+    volumes:
+      - chroma_data:/data/chroma
+      - /home/arun/Production/Monitoring/safe-report:/run/advanced-rag-monitoring:ro
+      - /home/arun/Production/Monitoring/reports:/var/lib/advanced-rag-reports:ro
+      - /home/arun/Production/Config/gmail-token.json:/run/secrets/gmail-token.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8001:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ../../frontend
+    ports:
+      - "8081:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+
+  redis:
+    image: redis:7.4-alpine
+    environment:
+      MONITORING_REDIS_PASSWORD: ${MONITORING_REDIS_PASSWORD:?Redis password required}
+    command:
+      - sh
+      - -c
+      - 'exec redis-server --appendonly yes --requirepass "$$MONITORING_REDIS_PASSWORD"'
+    volumes:
+      - monitoring_redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=$$MONITORING_REDIS_PASSWORD redis-cli ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  monitoring-worker:
+    build:
+      context: ../../implementation/monitoring-v1/celery
+    container_name: ragdashboardv2-monitoring-worker
+    env_file:
+      - ../../.env
+    environment:
+      DATABASE_URL: ${MONITORING_WORKER_DATABASE_URL:?Worker database URL required}
+      MONITORING_REDIS_HOST: redis
+      MONITORING_REDIS_PORT: "6379"
+      MONITORING_REDIS_PASSWORD: ${MONITORING_REDIS_PASSWORD:?Redis password required}
+      AGENT_REPORT_EMAIL_ENABLED: "true"
+      AGENT_REPORT_EMAIL_TO: sdsorgonicforms@gmail.com
+      REPORT_OUTPUT_DIR: /var/lib/advanced-rag-reports
+      AGENTIC_SELF_HEALTH_URL: http://api:8000/health
+      GMAIL_TOKEN_PATH: /run/secrets/gmail-token.json
+    volumes:
+      - /home/arun/Production/Monitoring/safe-report:/run/advanced-rag-monitoring:ro
+      - /home/arun/Production/Monitoring/reports:/var/lib/advanced-rag-reports:rw
+      - /home/arun/Production/Config/gmail-token.json:/run/secrets/gmail-token.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: ["celery", "-A", "celery_app.app", "worker", "--loglevel=INFO", "--concurrency=4"]
+    restart: unless-stopped
+
+  monitoring-beat:
+    build:
+      context: ../../implementation/monitoring-v1/celery
+    container_name: ragdashboardv2-monitoring-beat
+    env_file:
+      - ../../.env
+    environment:
+      DATABASE_URL: ${MONITORING_WORKER_DATABASE_URL:?Worker database URL required}
+      MONITORING_REDIS_HOST: redis
+      MONITORING_REDIS_PORT: "6379"
+      MONITORING_REDIS_PASSWORD: ${MONITORING_REDIS_PASSWORD:?Redis password required}
+      ENABLE_DAILY_REPORT_SCHEDULE: "true"
+      AGENT_REPORT_EMAIL_ENABLED: "false"
+      AGENT_REPORT_EMAIL_TO: sdsorgonicforms@gmail.com
+      REPORT_OUTPUT_DIR: /var/lib/advanced-rag-reports
+      AGENTIC_SELF_HEALTH_URL: http://api:8000/health
+      GMAIL_TOKEN_PATH: /run/secrets/gmail-token.json
+    volumes:
+      - /home/arun/Production/Monitoring/safe-report:/run/advanced-rag-monitoring:ro
+      - /home/arun/Production/Monitoring/reports:/var/lib/advanced-rag-reports:rw
+      - /home/arun/Production/Config/gmail-token.json:/run/secrets/gmail-token.json:ro
+      - monitoring_beat_data:/var/lib/celery
+    depends_on:
+      postgres:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      monitoring-worker:
+        condition: service_started
+    command: ["celery", "-A", "celery_app.app", "beat", "--loglevel=INFO", "--schedule=/var/lib/celery/celerybeat-schedule"]
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  chroma_data:
+  monitoring_redis_data:
+  monitoring_beat_data:

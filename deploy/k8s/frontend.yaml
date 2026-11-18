@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rag-frontend
+  namespace: advanced-rag
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: rag-frontend}
+  template:
+    metadata:
+      labels: {app: rag-frontend}
+    spec:
+      containers:
+        - name: frontend
+          image: YOUR_REGISTRY/advanced-rag-frontend:0.1.0
+          ports: [{containerPort: 80}]
+          resources:
+            requests: {cpu: "100m", memory: "64Mi"}
+            limits: {cpu: "500m", memory: "256Mi"}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rag-frontend
+  namespace: advanced-rag
+spec:
+  type: NodePort
+  selector: {app: rag-frontend}
+  ports: [{port: 80, targetPort: 80, nodePort: 30080}]
